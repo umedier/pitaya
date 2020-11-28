@@ -369,7 +369,9 @@ func (pc *ProtoClient) waitForData() {
 	for {
 		select {
 		case response := <-pc.Client.IncomingMsgChan:
-
+			if response.ID == 0 {
+				response.Route = strings.ToLower(response.Route)
+			}
 			inputMsg := dynamic.NewMessage(pc.expectedInputDescriptor)
 
 			msg, ok := pc.info.Commands[response.Route]
@@ -423,7 +425,7 @@ func (pc *ProtoClient) waitForData() {
 // ConnectTo connects to the server at addr, for now the only supported protocol is tcp
 // this methods blocks as it also handles the messages from the server
 func (pc *ProtoClient) ConnectTo(addr string, tlsConfig ...*tls.Config) error {
-	err := pc.Client.ConnectTo(addr, tlsConfig...)
+	err := pc.Client.ConnectToWS(addr, "", tlsConfig...)
 	if err != nil {
 		return err
 	}
@@ -460,11 +462,11 @@ func (pc *ProtoClient) LoadInfo(info *ProtoBufferInfo) error {
 }
 
 // AddPushResponse add a push response. Must be ladded before LoadInfo.
-func (pc *ProtoClient) AddPushResponse(route string, protoName string) {
-	if route != "" && protoName != "" {
+func (pc *ProtoClient) AddPushResponse(route string, protoName ...string) {
+	if route != "" && len(protoName) > 0 {
 		var command Command
-		command.input = ""
-		command.output = protoName
+		command.input = protoName[1]
+		command.output = protoName[0]
 
 		pc.info.Commands[route] = &command
 	}
